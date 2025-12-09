@@ -2,15 +2,18 @@ package jp.ac.dendai;
 
 import jp.ac.dendai.api.LichessApiClient;
 import jp.ac.dendai.api.OpeningExplorerClient;
+import jp.ac.dendai.api.ChessEngineClient;
 import jp.ac.dendai.model.Game;
 import jp.ac.dendai.model.OpeningResponse;
 import jp.ac.dendai.util.PositionTracker;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class App {
     public static void main(String[] args) {
         try {
             Gson gson = new Gson();
+            Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
             
             // Fetch one game
             LichessApiClient lichessClient = new LichessApiClient();
@@ -29,13 +32,15 @@ public class App {
             PositionTracker tracker = new PositionTracker();
             tracker.applyMovesSan(new String[]{moves[0], moves[1], moves[2]});
             
-            // Get UCI format for API
+            // Get UCI format for API and FEN for engine
             String movesUci = tracker.getLastMovesAsUci(3);
+            String fen = tracker.getFen();
             
             System.out.println("\n=== Opening Theory (after move 3) ===");
             System.out.println("Moves (UCI): " + movesUci);
-            System.out.println("FEN: " + tracker.getFen());
+            System.out.println("FEN: " + fen);
             
+            // Get opening moves
             OpeningExplorerClient explorerClient = new OpeningExplorerClient();
             String openingJson = explorerClient.getOpeningMoves(movesUci);
             
@@ -52,6 +57,15 @@ public class App {
                     move.getSan() + " (UCI: " + move.getUci() + ") - " + 
                     move.getTotalGames() + " games"
                 ));
+            
+            // Get best move from chess engine
+            System.out.println("\n=== Chess Engine Analysis ===");
+            ChessEngineClient engineClient = new ChessEngineClient();
+            String engineResponse = engineClient.getBestMove(fen);
+            
+            System.out.println("Raw Engine Response:");
+            Object engineJson = gson.fromJson(engineResponse, Object.class);
+            System.out.println(prettyGson.toJson(engineJson));
             
         } catch (Exception e) {
             e.printStackTrace();
