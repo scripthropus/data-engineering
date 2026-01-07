@@ -51,12 +51,14 @@ public class App {
             // Display player information
             if (game.getPlayers() != null) {
                 System.out.println();
-                if (game.getPlayers().getWhite() != null) {
-                    System.out.println("White: " + game.getPlayers().getWhite().getUserId() +
+                if (game.getPlayers().getWhite() != null &&
+                    game.getPlayers().getWhite().getUser() != null) {
+                    System.out.println("White: " + game.getPlayers().getWhite().getUser().getId() +
                                        " (" + game.getPlayers().getWhite().getRating() + ")");
                 }
-                if (game.getPlayers().getBlack() != null) {
-                    System.out.println("Black: " + game.getPlayers().getBlack().getUserId() +
+                if (game.getPlayers().getBlack() != null &&
+                    game.getPlayers().getBlack().getUser() != null) {
+                    System.out.println("Black: " + game.getPlayers().getBlack().getUser().getId() +
                                        " (" + game.getPlayers().getBlack().getRating() + ")");
                 }
             }

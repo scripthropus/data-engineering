@@ -25,15 +25,22 @@ public class Game {
     }
 
     public static class Player {
-        private String user;
-        private String userId;
+        private UserInfo user;
         private int rating;
 
-        public String getUser() { return user; }
-        public void setUser(String user) { this.user = user; }
+        public static class UserInfo {
+            private String name;
+            private String id;
 
-        public String getUserId() { return userId; }
-        public void setUserId(String userId) { this.userId = userId; }
+            public String getName() { return name; }
+            public void setName(String name) { this.name = name; }
+
+            public String getId() { return id; }
+            public void setId(String id) { this.id = id; }
+        }
+
+        public UserInfo getUser() { return user; }
+        public void setUser(UserInfo user) { this.user = user; }
 
         public int getRating() { return rating; }
         public void setRating(int rating) { this.rating = rating; }
@@ -60,14 +67,16 @@ public class Game {
         if (players == null) return null;
 
         if (players.getWhite() != null &&
-            players.getWhite().getUserId() != null &&
-            players.getWhite().getUserId().equalsIgnoreCase(username)) {
+            players.getWhite().getUser() != null &&
+            players.getWhite().getUser().getId() != null &&
+            players.getWhite().getUser().getId().equalsIgnoreCase(username)) {
             return "white";
         }
 
         if (players.getBlack() != null &&
-            players.getBlack().getUserId() != null &&
-            players.getBlack().getUserId().equalsIgnoreCase(username)) {
+            players.getBlack().getUser() != null &&
+            players.getBlack().getUser().getId() != null &&
+            players.getBlack().getUser().getId().equalsIgnoreCase(username)) {
             return "black";
         }
 
