@@ -46,16 +46,21 @@ java -cp target/chess-1.0-SNAPSHOT.jar jp.ac.dendai.App [username] [color] [num_
 ### パラメータ
 
 - `username`: Lichessのユーザー名（デフォルト: "def-e"）
-- `color`: 分析する色 - "white" または "black"（デフォルト: "white"）
+- `color`: 分析する色 - "white" または "black"（オプション: 省略時は自動判定）
 - `num_games`: 分析する対局数（デフォルト: 1）
+
+**重要**: `color`パラメータを省略すると、対局データから自動的にプレイヤーの色を判定します。
 
 ### 実行例
 
 ```bash
-# デフォルト設定で実行（ユーザー"def-e"の白番の手を分析）
+# デフォルト設定で実行（ユーザー"def-e"の色を自動判定して分析）
 java -cp target/chess-1.0-SNAPSHOT.jar jp.ac.dendai.App
 
-# 特定のユーザーの黒番の手を分析
+# 特定のユーザーの手を自動判定して分析
+java -cp target/chess-1.0-SNAPSHOT.jar jp.ac.dendai.App hikaru
+
+# 色を明示的に指定して分析
 java -cp target/chess-1.0-SNAPSHOT.jar jp.ac.dendai.App hikaru black
 
 # 複数の対局を分析
@@ -66,29 +71,34 @@ java -cp target/chess-1.0-SNAPSHOT.jar jp.ac.dendai.App magnus white 5
 
 ```
 === Chess Opening Trainer ===
-Analyzing white moves for user: def-e
+Fetching games for user: def-e
 
 Game ID: abc123xyz
 Opening: Sicilian Defense: Najdorf Variation
 
+White: opponent123 (2100)
+Black: def-e (1950)
+
+Analyzing black moves for def-e
+
 === Opening Analysis Results ===
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Move 5. White: Bd3
+Move 5... Black: d5
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ❌ This move deviates from opening theory!
 
 📚 Top Opening Moves:
-   Nc3 - 15234 games
-   Bd3 - 8123 games
-   Be2 - 6543 games
+   e6 - 15234 games
+   a6 - 8123 games
+   d5 - 6543 games
 
-💡 Recommended: Nc3
+💡 Recommended: e6
 
 📊 Evaluation:
-   After Bd3: +0.35
-   After Nc3: +0.52
-   Loss: 0.17 pawns
+   After d5: +0.75
+   After e6: +0.35
+   Loss: 0.40 pawns
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Summary:

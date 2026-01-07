@@ -16,7 +16,7 @@ public class App {
 
             // Default values
             String username = "def-e";
-            String playerColor = "white";
+            String playerColor = null; // Will be auto-detected
             int numGames = 1;
 
             // Parse command line arguments
@@ -25,7 +25,7 @@ public class App {
             if (args.length > 2) numGames = Integer.parseInt(args[2]);
 
             System.out.println("=== Chess Opening Trainer ===");
-            System.out.println("Analyzing " + playerColor + " moves for user: " + username);
+            System.out.println("Fetching games for user: " + username);
             System.out.println();
 
             // Fetch game
@@ -34,10 +34,34 @@ public class App {
             String firstLine = response.split("\n")[0];
             Game game = gson.fromJson(firstLine, Game.class);
 
+            // Auto-detect player color if not specified
+            if (playerColor == null) {
+                playerColor = game.getPlayerColor(username);
+                if (playerColor == null) {
+                    System.err.println("Error: Could not determine player color. Player '" + username + "' not found in game.");
+                    return;
+                }
+            }
+
             System.out.println("Game ID: " + game.getId());
             if (game.getOpening() != null && game.getOpening().getName() != null) {
                 System.out.println("Opening: " + game.getOpening().getName());
             }
+
+            // Display player information
+            if (game.getPlayers() != null) {
+                System.out.println();
+                if (game.getPlayers().getWhite() != null) {
+                    System.out.println("White: " + game.getPlayers().getWhite().getUserId() +
+                                       " (" + game.getPlayers().getWhite().getRating() + ")");
+                }
+                if (game.getPlayers().getBlack() != null) {
+                    System.out.println("Black: " + game.getPlayers().getBlack().getUserId() +
+                                       " (" + game.getPlayers().getBlack().getRating() + ")");
+                }
+            }
+
+            System.out.println("\nAnalyzing " + playerColor + " moves for " + username);
             System.out.println();
 
             // Parse moves (in SAN format)
