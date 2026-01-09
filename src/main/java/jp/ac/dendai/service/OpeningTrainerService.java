@@ -154,6 +154,7 @@ public class OpeningTrainerService {
     public String[] getOpeningTheoryLine(String[] startingMoves) throws IOException {
         List<String> theoryLine = new ArrayList<>();
         PositionTracker tracker = new PositionTracker();
+        final long MIN_GAMES = 100; // Minimum games to consider it theory
 
         // Apply starting moves
         for (String move : startingMoves) {
@@ -176,8 +177,14 @@ public class OpeningTrainerService {
 
                 // Get the most played move (top move)
                 OpeningMove topMove = openingResponse.getMoves().get(0);
-                String move = topMove.getSan();
 
+                // Check if this move has enough games to be considered theory
+                if (topMove.getTotalGames() < MIN_GAMES) {
+                    // Not enough games, stop here
+                    break;
+                }
+
+                String move = topMove.getSan();
                 theoryLine.add(move);
                 tracker.applyMoveSan(move);
 

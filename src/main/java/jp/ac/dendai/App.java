@@ -145,6 +145,12 @@ public class App {
         System.out.println("📖 Opening Sequence (Theory):");
         System.out.println();
 
+        if (theoryLine.length < 2) {
+            System.out.println("   定石情報はありません");
+            System.out.println();
+            return;
+        }
+
         // Display up to 15 full moves (30 plies) from theory
         int maxPly = Math.min(30, theoryLine.length);
 
@@ -160,6 +166,14 @@ public class App {
                 System.out.println("   " + moveNumber + ". " + whiteMove);
             }
         }
+
+        // Show if theory ran out before 15 moves
+        if (theoryLine.length < 30) {
+            int lastMove = (theoryLine.length + 1) / 2;
+            System.out.println();
+            System.out.println("   (定石は" + lastMove + "手目までです)");
+        }
+
         System.out.println();
     }
 }
