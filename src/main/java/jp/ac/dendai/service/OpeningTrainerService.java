@@ -145,4 +145,48 @@ public class OpeningTrainerService {
             return null;
         }
     }
+
+    /**
+     * Get opening theory line (15 moves)
+     * @param startingMoves Initial moves played (up to deviation or start of game)
+     * @return Array of opening theory moves (SAN format)
+     */
+    public String[] getOpeningTheoryLine(String[] startingMoves) throws IOException {
+        List<String> theoryLine = new ArrayList<>();
+        PositionTracker tracker = new PositionTracker();
+
+        // Apply starting moves
+        for (String move : startingMoves) {
+            tracker.applyMoveSan(move);
+            theoryLine.add(move);
+        }
+
+        // Continue with opening theory up to 15 full moves (30 plies)
+        while (theoryLine.size() < 30) {
+            String currentUciMoves = tracker.getAllMovesAsUci();
+
+            try {
+                String openingJson = explorerClient.getOpeningMoves(currentUciMoves);
+                OpeningResponse openingResponse = gson.fromJson(openingJson, OpeningResponse.class);
+
+                if (openingResponse.getMoves() == null || openingResponse.getMoves().isEmpty()) {
+                    // No more theory available
+                    break;
+                }
+
+                // Get the most played move (top move)
+                OpeningMove topMove = openingResponse.getMoves().get(0);
+                String move = topMove.getSan();
+
+                theoryLine.add(move);
+                tracker.applyMoveSan(move);
+
+            } catch (Exception e) {
+                // If we can't get theory, stop here
+                break;
+            }
+        }
+
+        return theoryLine.toArray(new String[0]);
+    }
 }

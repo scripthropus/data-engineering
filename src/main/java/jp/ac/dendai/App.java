@@ -73,20 +73,22 @@ public class App {
             OpeningTrainerService trainer = new OpeningTrainerService(15);
             List<MoveAnalysis> analyses = trainer.analyzeGame(moves, playerColor);
 
+            // Get opening theory line
+            String[] theoryLine = trainer.getOpeningTheoryLine(new String[0]);
+
             // Display results
             boolean isWhite = "white".equalsIgnoreCase(playerColor);
-            displayAnalyses(analyses, moves, isWhite);
+            displayAnalyses(analyses, moves, isWhite, theoryLine);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static void displayAnalyses(List<MoveAnalysis> analyses, String[] allMoves, boolean analyzingWhite) {
+    private static void displayAnalyses(List<MoveAnalysis> analyses, String[] allMoves, boolean analyzingWhite, String[] theoryLine) {
         System.out.println("=== Opening Analysis Results ===\n");
 
         int deviations = 0;
-        int deviationPlyIndex = -1; // Index in allMoves array where deviation occurred
 
         // Find deviation and display it
         for (int i = 0; i < analyses.size(); i++) {
@@ -94,10 +96,6 @@ public class App {
 
             if (!analysis.isOpeningMove()) {
                 deviations++;
-
-                // Calculate the ply index in the full game
-                int moveNumber = analysis.getMoveNumber();
-                deviationPlyIndex = (moveNumber - 1) * 2 + (analyzingWhite ? 0 : 1);
 
                 System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 System.out.println("Move " + analysis.getFormattedMoveNumber() + " " +
@@ -142,26 +140,19 @@ public class App {
         System.out.println("  Opening deviations: " + deviations);
         System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-        // Display opening sequence (both colors)
+        // Display opening theory line (15 moves)
         System.out.println();
         System.out.println("📖 Opening Sequence (Theory):");
         System.out.println();
 
-        // Determine how many plies to display
-        int maxPly;
-        if (deviationPlyIndex > 0) {
-            // Show moves up to (but not including) the deviation
-            maxPly = deviationPlyIndex;
-        } else {
-            // No deviation, show up to 15 full moves (30 plies)
-            maxPly = Math.min(30, allMoves.length);
-        }
+        // Display up to 15 full moves (30 plies) from theory
+        int maxPly = Math.min(30, theoryLine.length);
 
         // Display moves in pairs (White move, Black move)
         for (int ply = 0; ply < maxPly; ply += 2) {
             int moveNumber = (ply / 2) + 1;
-            String whiteMove = allMoves[ply];
-            String blackMove = ply + 1 < maxPly ? allMoves[ply + 1] : "";
+            String whiteMove = theoryLine[ply];
+            String blackMove = ply + 1 < maxPly ? theoryLine[ply + 1] : "";
 
             if (!blackMove.isEmpty()) {
                 System.out.println("   " + moveNumber + ". " + whiteMove + " " + blackMove);
