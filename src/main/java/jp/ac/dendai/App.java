@@ -74,18 +74,19 @@ public class App {
             List<MoveAnalysis> analyses = trainer.analyzeGame(moves, playerColor);
 
             // Display results
-            displayAnalyses(analyses);
+            boolean isWhite = "white".equalsIgnoreCase(playerColor);
+            displayAnalyses(analyses, moves, isWhite);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static void displayAnalyses(List<MoveAnalysis> analyses) {
+    private static void displayAnalyses(List<MoveAnalysis> analyses, String[] allMoves, boolean analyzingWhite) {
         System.out.println("=== Opening Analysis Results ===\n");
 
         int deviations = 0;
-        int lastOpeningMoveIndex = -1;
+        int deviationPlyIndex = -1; // Index in allMoves array where deviation occurred
 
         // Find deviation and display it
         for (int i = 0; i < analyses.size(); i++) {
@@ -93,6 +94,10 @@ public class App {
 
             if (!analysis.isOpeningMove()) {
                 deviations++;
+
+                // Calculate the ply index in the full game
+                int moveNumber = analysis.getMoveNumber();
+                deviationPlyIndex = (moveNumber - 1) * 2 + (analyzingWhite ? 0 : 1);
 
                 System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 System.out.println("Move " + analysis.getFormattedMoveNumber() + " " +
@@ -127,8 +132,6 @@ public class App {
 
                 System.out.println();
                 break; // Only show first deviation
-            } else {
-                lastOpeningMoveIndex = i;
             }
         }
 
@@ -139,18 +142,33 @@ public class App {
         System.out.println("  Opening deviations: " + deviations);
         System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-        // Display opening sequence
-        if (lastOpeningMoveIndex >= 0) {
-            System.out.println();
-            System.out.println("📖 Your Opening Sequence (Theory):");
-            System.out.println();
+        // Display opening sequence (both colors)
+        System.out.println();
+        System.out.println("📖 Opening Sequence (Theory):");
+        System.out.println();
 
-            for (int i = 0; i <= lastOpeningMoveIndex; i++) {
-                MoveAnalysis analysis = analyses.get(i);
-                System.out.println("   " + analysis.getFormattedMoveNumber() + " " +
-                                   analysis.getPlayedMove());
-            }
-            System.out.println();
+        // Determine how many plies to display
+        int maxPly;
+        if (deviationPlyIndex > 0) {
+            // Show moves up to (but not including) the deviation
+            maxPly = deviationPlyIndex;
+        } else {
+            // No deviation, show up to 15 full moves (30 plies)
+            maxPly = Math.min(30, allMoves.length);
         }
+
+        // Display moves in pairs (White move, Black move)
+        for (int ply = 0; ply < maxPly; ply += 2) {
+            int moveNumber = (ply / 2) + 1;
+            String whiteMove = allMoves[ply];
+            String blackMove = ply + 1 < maxPly ? allMoves[ply + 1] : "";
+
+            if (!blackMove.isEmpty()) {
+                System.out.println("   " + moveNumber + ". " + whiteMove + " " + blackMove);
+            } else {
+                System.out.println("   " + moveNumber + ". " + whiteMove);
+            }
+        }
+        System.out.println();
     }
 }
