@@ -85,8 +85,12 @@ public class App {
         System.out.println("=== Opening Analysis Results ===\n");
 
         int deviations = 0;
+        int lastOpeningMoveIndex = -1;
 
-        for (MoveAnalysis analysis : analyses) {
+        // Find deviation and display it
+        for (int i = 0; i < analyses.size(); i++) {
+            MoveAnalysis analysis = analyses.get(i);
+
             if (!analysis.isOpeningMove()) {
                 deviations++;
 
@@ -122,6 +126,9 @@ public class App {
                 }
 
                 System.out.println();
+                break; // Only show first deviation
+            } else {
+                lastOpeningMoveIndex = i;
             }
         }
 
@@ -131,5 +138,19 @@ public class App {
         System.out.println("  Total moves analyzed: " + analyses.size());
         System.out.println("  Opening deviations: " + deviations);
         System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+        // Display opening sequence
+        if (lastOpeningMoveIndex >= 0) {
+            System.out.println();
+            System.out.println("📖 Your Opening Sequence (Theory):");
+            System.out.println();
+
+            for (int i = 0; i <= lastOpeningMoveIndex; i++) {
+                MoveAnalysis analysis = analyses.get(i);
+                System.out.println("   " + analysis.getFormattedMoveNumber() + " " +
+                                   analysis.getPlayedMove());
+            }
+            System.out.println();
+        }
     }
 }
