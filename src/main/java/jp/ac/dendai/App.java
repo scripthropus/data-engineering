@@ -70,11 +70,10 @@ public class App {
             String[] moves = game.getMoves().split(" ");
 
             // Analyze game
-            OpeningTrainerService trainer = new OpeningTrainerService(15);
+            OpeningTrainerService trainer = new OpeningTrainerService();
             List<MoveAnalysis> analyses = trainer.analyzeGame(moves, playerColor);
 
             // Get starting moves for theory line (moves that were in theory)
-            boolean isWhite = "white".equalsIgnoreCase(playerColor);
             int lastTheoryMoveIndex = -1;
 
             for (MoveAnalysis analysis : analyses) {
@@ -98,14 +97,14 @@ public class App {
             String[] theoryLine = trainer.getOpeningTheoryLine(startingMoves);
 
             // Display results
-            displayAnalyses(analyses, moves, isWhite, theoryLine);
+            displayAnalyses(analyses, theoryLine);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static void displayAnalyses(List<MoveAnalysis> analyses, String[] allMoves, boolean analyzingWhite, String[] theoryLine) {
+    private static void displayAnalyses(List<MoveAnalysis> analyses, String[] theoryLine) {
         System.out.println("=== Opening Analysis Results ===\n");
 
         int deviations = 0;

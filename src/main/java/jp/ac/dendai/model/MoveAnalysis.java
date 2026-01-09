@@ -9,10 +9,7 @@ public class MoveAnalysis {
     private boolean isOpeningMove;
     private List<OpeningMove> topOpeningMoves;
     private String recommendedMove;
-    private Double playedMoveEval;
-    private Double recommendedMoveEval;
     private String punishmentMove;
-    private Double evalAfterPunishment;
 
     public MoveAnalysis(int moveNumber, boolean isWhite, String playedMove) {
         this.moveNumber = moveNumber;
@@ -43,45 +40,9 @@ public class MoveAnalysis {
         this.recommendedMove = recommendedMove;
     }
 
-    public Double getPlayedMoveEval() { return playedMoveEval; }
-    public void setPlayedMoveEval(Double playedMoveEval) {
-        this.playedMoveEval = playedMoveEval;
-    }
-
-    public Double getRecommendedMoveEval() { return recommendedMoveEval; }
-    public void setRecommendedMoveEval(Double recommendedMoveEval) {
-        this.recommendedMoveEval = recommendedMoveEval;
-    }
-
     public String getPunishmentMove() { return punishmentMove; }
     public void setPunishmentMove(String punishmentMove) {
         this.punishmentMove = punishmentMove;
-    }
-
-    public Double getEvalAfterPunishment() { return evalAfterPunishment; }
-    public void setEvalAfterPunishment(Double evalAfterPunishment) {
-        this.evalAfterPunishment = evalAfterPunishment;
-    }
-
-    /**
-     * Calculate evaluation loss (positive = mistake)
-     */
-    public Double getEvalLoss() {
-        if (playedMoveEval == null || recommendedMoveEval == null) {
-            return null;
-        }
-        // For white, lower eval is worse. For black, higher eval is worse.
-        return isWhite
-            ? recommendedMoveEval - playedMoveEval
-            : playedMoveEval - recommendedMoveEval;
-    }
-
-    /**
-     * Check if this is a significant mistake (>= 0.5 pawn loss)
-     */
-    public boolean isSignificantMistake() {
-        Double loss = getEvalLoss();
-        return loss != null && loss >= 0.5;
     }
 
     /**

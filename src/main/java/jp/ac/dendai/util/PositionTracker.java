@@ -26,41 +26,10 @@ public class PositionTracker {
     }
 
     /**
-     * Apply multiple moves in SAN format
-     */
-    public void applyMovesSan(String[] sanMoves) {
-        for (String move : sanMoves) {
-            applyMoveSan(move);
-        }
-    }
-
-    /**
      * Get FEN of current position
      */
     public String getFen() {
         return board.getFen();
-    }
-
-    /**
-     * Get the last N moves in UCI format as comma-separated string
-     */
-    public String getLastMovesAsUci(int count) {
-        if (count == 0 || board.getBackup().isEmpty()) {
-            return "";
-        }
-
-        StringBuilder uciMoves = new StringBuilder();
-        int movesAvailable = Math.min(count, board.getBackup().size());
-
-        for (int i = 0; i < movesAvailable; i++) {
-            Move move = board.getBackup().get(i).getMove();
-            if (i > 0) {
-                uciMoves.append(",");
-            }
-            uciMoves.append(move.toString());
-        }
-
-        return uciMoves.toString();
     }
 
     /**
@@ -85,24 +54,10 @@ public class PositionTracker {
     }
 
     /**
-     * Get the board object
-     */
-    public Board getBoard() {
-        return board;
-    }
-
-    /**
      * Clone this tracker
      */
     public PositionTracker clone() {
         PositionTracker clone = new PositionTracker(this.getFen());
         return clone;
-    }
-
-    /**
-     * Reset to starting position
-     */
-    public void reset() {
-        board.loadFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
     }
 }

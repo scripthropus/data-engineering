@@ -17,18 +17,13 @@ public class OpeningTrainerService {
     private final OpeningExplorerClient explorerClient;
     private final ChessEngineClient engineClient;
     private final Gson gson;
-    private final int openingPhaseLimit; // Number of moves to analyze
+    private static final int OPENING_PHASE_LIMIT = 15; // Number of moves to analyze
     private static final long MIN_GAMES = 1000; // Minimum games to consider as theory
 
     public OpeningTrainerService() {
-        this(15); // Default: analyze first 15 moves (30 plies)
-    }
-
-    public OpeningTrainerService(int openingPhaseLimit) {
         this.explorerClient = new OpeningExplorerClient();
         this.engineClient = new ChessEngineClient();
         this.gson = new Gson();
-        this.openingPhaseLimit = openingPhaseLimit;
     }
 
     /**
@@ -41,10 +36,9 @@ public class OpeningTrainerService {
         List<MoveAnalysis> analyses = new ArrayList<>();
         PositionTracker tracker = new PositionTracker();
         boolean analyzeWhite = "white".equalsIgnoreCase(playerColor);
-        boolean foundDeviation = false;
 
         // Analyze each move in the opening phase
-        for (int i = 0; i < Math.min(moves.length, openingPhaseLimit * 2); i++) {
+        for (int i = 0; i < Math.min(moves.length, OPENING_PHASE_LIMIT * 2); i++) {
             boolean isWhiteMove = i % 2 == 0;
             int moveNumber = (i / 2) + 1;
             String move = moves[i];
@@ -75,7 +69,6 @@ public class OpeningTrainerService {
 
                 // If this move deviates from theory, stop analyzing
                 if (!analysis.isOpeningMove()) {
-                    foundDeviation = true;
                     // Apply this move and break
                     tracker.applyMoveSan(move);
                     break;
