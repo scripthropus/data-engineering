@@ -93,7 +93,7 @@ public class OpeningTrainerService {
         MoveAnalysis analysis = new MoveAnalysis(moveNumber, isWhiteMove, playedMove);
 
         // Check if move is in opening book
-        if (openingTheory != null && openingTheory.getMoves() != null) {
+        if (openingTheory != null && openingTheory.getMoves() != null && !openingTheory.getMoves().isEmpty()) {
             analysis.setTopOpeningMoves(openingTheory.getMoves());
 
             // Check if played move is in top opening moves
@@ -102,62 +102,25 @@ public class OpeningTrainerService {
 
             analysis.setOpeningMove(isOpeningMove);
 
-            if (!isOpeningMove && !openingTheory.getMoves().isEmpty()) {
-                // Move deviated from theory - get recommended move
+            if (!isOpeningMove) {
+                // Move deviated from theory - get recommended opening move
                 OpeningMove topMove = openingTheory.getMoves().get(0);
                 analysis.setRecommendedMove(topMove.getSan());
 
-                // Evaluate both moves using engine
-                evaluateMoves(tracker, analysis, playedMove, topMove.getSan());
+                // Optionally: Get opponent's best response to the bad move
+                PositionTracker afterPlayed = tracker.clone();
+                afterPlayed.applyMoveSan(playedMove);
+                String opponentResponse = getEngineBestMove(afterPlayed.getFen());
+                if (opponentResponse != null) {
+                    analysis.setPunishmentMove(opponentResponse);
+                }
             }
         } else {
-            // Out of book - use engine only
+            // Out of book - no theory available
             analysis.setOpeningMove(false);
-            String engineBestMove = getEngineBestMove(tracker.getFen());
-
-            if (engineBestMove != null && !engineBestMove.equals(playedMove)) {
-                analysis.setRecommendedMove(engineBestMove);
-                evaluateMoves(tracker, analysis, playedMove, engineBestMove);
-            }
         }
 
         return analysis;
-    }
-
-    /**
-     * Evaluate both the played move and recommended move
-     */
-    private void evaluateMoves(
-            PositionTracker tracker,
-            MoveAnalysis analysis,
-            String playedMove,
-            String recommendedMove
-    ) throws IOException {
-
-        // Evaluate after played move
-        PositionTracker afterPlayed = tracker.clone();
-        afterPlayed.applyMoveSan(playedMove);
-        Double playedEval = getPositionEvaluation(afterPlayed.getFen());
-        analysis.setPlayedMoveEval(playedEval);
-
-        // Evaluate after recommended move
-        PositionTracker afterRecommended = tracker.clone();
-        afterRecommended.applyMoveSan(recommendedMove);
-        Double recommendedEval = getPositionEvaluation(afterRecommended.getFen());
-        analysis.setRecommendedMoveEval(recommendedEval);
-
-        // Find punishment for the played move
-        if (analysis.isSignificantMistake()) {
-            String punishment = getEngineBestMove(afterPlayed.getFen());
-            analysis.setPunishmentMove(punishment);
-
-            if (punishment != null) {
-                PositionTracker afterPunishment = afterPlayed.clone();
-                afterPunishment.applyMoveSan(punishment);
-                Double punishmentEval = getPositionEvaluation(afterPunishment.getFen());
-                analysis.setEvalAfterPunishment(punishmentEval);
-            }
-        }
     }
 
     /**
@@ -173,19 +136,4 @@ public class OpeningTrainerService {
             return null;
         }
     }
-
-    /**
-     * Get position evaluation from engine
-     */
-    private Double getPositionEvaluation(String fen) {
-        try {
-            String response = engineClient.getBestMove(fen);
-            EngineResponse engineResponse = gson.fromJson(response, EngineResponse.class);
-            return engineResponse.getEvaluation();
-        } catch (Exception e) {
-            System.err.println("Warning: Could not get position evaluation: " + e.getMessage());
-            return null;
-        }
-    }
-
 }
