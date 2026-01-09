@@ -54,25 +54,71 @@ public class OpeningTrainerService {
                 System.err.println("Warning: Could not fetch opening theory for move " + moveNumber + ": " + e.getMessage());
             }
 
-            // Only analyze the specified player's moves
+            // Filter moves with at least MIN_GAMES
+            List<OpeningMove> theoryMoves = new ArrayList<>();
+            if (openingTheory != null && openingTheory.getMoves() != null) {
+                theoryMoves = openingTheory.getMoves().stream()
+                    .filter(om -> om.getTotalGames() >= MIN_GAMES)
+                    .toList();
+            }
+
+            // Check if theory exists in this position
+            if (theoryMoves.isEmpty()) {
+                // Out of theory - no moves with MIN_GAMES
+                if (isWhiteMove == analyzeWhite) {
+                    // Mark this as out of theory
+                    MoveAnalysis analysis = new MoveAnalysis(moveNumber, isWhiteMove, move);
+                    analysis.setOutOfTheory(true);
+                    analysis.setOpeningMove(false);
+
+                    // Get punishment move even when out of theory
+                    PositionTracker afterPlayed = tracker.clone();
+                    afterPlayed.applyMoveSan(move);
+                    String opponentResponse = getEngineBestMove(afterPlayed.getFen());
+                    if (opponentResponse != null) {
+                        analysis.setPunishmentMove(opponentResponse);
+                    }
+
+                    analyses.add(analysis);
+                }
+                // Stop analyzing - opening phase has ended
+                break;
+            }
+
+            // Theory exists - analyze only the specified player's moves
             if (isWhiteMove == analyzeWhite) {
-                // Create analysis
-                MoveAnalysis analysis = analyzeMoveInPosition(
-                    tracker,
-                    move,
-                    moveNumber,
-                    isWhiteMove,
-                    openingTheory
-                );
+                // Check if played move is in theory
+                boolean isInTheory = theoryMoves.stream()
+                    .anyMatch(om -> om.getSan().equals(move));
 
-                analyses.add(analysis);
+                MoveAnalysis analysis = new MoveAnalysis(moveNumber, isWhiteMove, move);
+                analysis.setOpeningMove(isInTheory);
+                analysis.setOutOfTheory(false);
 
-                // If this move deviates from theory, stop analyzing
-                if (!analysis.isOpeningMove()) {
+                // Set top opening moves (only moves with MIN_GAMES)
+                analysis.setTopOpeningMoves(theoryMoves);
+
+                if (!isInTheory) {
+                    // Deviated from theory
+                    // Set recommended move (top theory move)
+                    OpeningMove topMove = theoryMoves.get(0);
+                    analysis.setRecommendedMove(topMove.getSan());
+
+                    // Get opponent's best response to the bad move
+                    PositionTracker afterPlayed = tracker.clone();
+                    afterPlayed.applyMoveSan(move);
+                    String opponentResponse = getEngineBestMove(afterPlayed.getFen());
+                    if (opponentResponse != null) {
+                        analysis.setPunishmentMove(opponentResponse);
+                    }
+
+                    analyses.add(analysis);
                     // Apply this move and break
                     tracker.applyMoveSan(move);
                     break;
                 }
+
+                analyses.add(analysis);
             }
 
             // Apply the move for next iteration
@@ -80,57 +126,6 @@ public class OpeningTrainerService {
         }
 
         return analyses;
-    }
-
-    /**
-     * Analyze a single move in a position
-     */
-    private MoveAnalysis analyzeMoveInPosition(
-            PositionTracker tracker,
-            String playedMove,
-            int moveNumber,
-            boolean isWhiteMove,
-            OpeningResponse openingTheory
-    ) throws IOException {
-
-        MoveAnalysis analysis = new MoveAnalysis(moveNumber, isWhiteMove, playedMove);
-
-        // Check if move is in opening book
-        if (openingTheory != null && openingTheory.getMoves() != null && !openingTheory.getMoves().isEmpty()) {
-            analysis.setTopOpeningMoves(openingTheory.getMoves());
-
-            // Filter moves with at least MIN_GAMES
-            List<OpeningMove> theoryMoves = openingTheory.getMoves().stream()
-                .filter(om -> om.getTotalGames() >= MIN_GAMES)
-                .toList();
-
-            // Check if played move is in theory moves (with enough games)
-            boolean isOpeningMove = theoryMoves.stream()
-                .anyMatch(om -> om.getSan().equals(playedMove));
-
-            analysis.setOpeningMove(isOpeningMove);
-
-            if (!isOpeningMove) {
-                // Move deviated from theory - get recommended opening move
-                if (!theoryMoves.isEmpty()) {
-                    OpeningMove topMove = theoryMoves.get(0);
-                    analysis.setRecommendedMove(topMove.getSan());
-                }
-
-                // Optionally: Get opponent's best response to the bad move
-                PositionTracker afterPlayed = tracker.clone();
-                afterPlayed.applyMoveSan(playedMove);
-                String opponentResponse = getEngineBestMove(afterPlayed.getFen());
-                if (opponentResponse != null) {
-                    analysis.setPunishmentMove(opponentResponse);
-                }
-            }
-        } else {
-            // Out of book - no theory available
-            analysis.setOpeningMove(false);
-        }
-
-        return analysis;
     }
 
     /**

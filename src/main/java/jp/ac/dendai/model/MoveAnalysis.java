@@ -7,6 +7,7 @@ public class MoveAnalysis {
     private boolean isWhite;
     private String playedMove;
     private boolean isOpeningMove;
+    private boolean isOutOfTheory;  // True if this position has no theory (< 1000 games)
     private List<OpeningMove> topOpeningMoves;
     private String recommendedMove;
     private String punishmentMove;
@@ -29,6 +30,9 @@ public class MoveAnalysis {
 
     public boolean isOpeningMove() { return isOpeningMove; }
     public void setOpeningMove(boolean openingMove) { isOpeningMove = openingMove; }
+
+    public boolean isOutOfTheory() { return isOutOfTheory; }
+    public void setOutOfTheory(boolean outOfTheory) { isOutOfTheory = outOfTheory; }
 
     public List<OpeningMove> getTopOpeningMoves() { return topOpeningMoves; }
     public void setTopOpeningMoves(List<OpeningMove> topOpeningMoves) {

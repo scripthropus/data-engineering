@@ -107,56 +107,88 @@ public class App {
     private static void displayAnalyses(List<MoveAnalysis> analyses, String[] theoryLine) {
         System.out.println("=== Opening Analysis Results ===\n");
 
-        int deviations = 0;
+        // Count moves that followed theory
+        int movesInTheory = 0;
+        MoveAnalysis deviationAnalysis = null;
+        MoveAnalysis outOfTheoryAnalysis = null;
 
-        // Find deviation and display it
-        for (int i = 0; i < analyses.size(); i++) {
-            MoveAnalysis analysis = analyses.get(i);
-
-            if (!analysis.isOpeningMove()) {
-                deviations++;
-
-                System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                System.out.println("Move " + analysis.getFormattedMoveNumber() + " " +
-                                   analysis.getPlayerName() + ": " + analysis.getPlayedMove());
-                System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-                System.out.println("❌ This move deviates from opening theory!");
-                System.out.println();
-
-                // Show top opening moves
-                if (analysis.getTopOpeningMoves() != null && !analysis.getTopOpeningMoves().isEmpty()) {
-                    System.out.println("📚 Top Opening Moves:");
-                    analysis.getTopOpeningMoves().stream()
-                        .limit(3)
-                        .forEach(move -> System.out.println(
-                            "   " + move.getSan() + " - " + move.getTotalGames() + " games"
-                        ));
-                    System.out.println();
-                }
-
-                // Show recommended move (what you should have played)
-                if (analysis.getRecommendedMove() != null) {
-                    System.out.println("💡 You should have played: " + analysis.getRecommendedMove());
-                    System.out.println();
-                }
-
-                // Show opponent's best response to your bad move
-                if (analysis.getPunishmentMove() != null) {
-                    System.out.println("⚔️  Opponent's best response to your move:");
-                    System.out.println("   " + analysis.getPunishmentMove());
-                }
-
-                System.out.println();
-                break; // Only show first deviation
+        for (MoveAnalysis analysis : analyses) {
+            if (analysis.isOpeningMove()) {
+                movesInTheory++;
+            } else if (analysis.isOutOfTheory()) {
+                outOfTheoryAnalysis = analysis;
+                break;
+            } else {
+                deviationAnalysis = analysis;
+                break;
             }
+        }
+
+        // Display deviation or out-of-theory
+        if (deviationAnalysis != null) {
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            System.out.println("Move " + deviationAnalysis.getFormattedMoveNumber() + " " +
+                               deviationAnalysis.getPlayerName() + ": " + deviationAnalysis.getPlayedMove());
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+            System.out.println("❌ This move deviates from opening theory!");
+            System.out.println();
+
+            // Show recommended move (what you should have played)
+            if (deviationAnalysis.getRecommendedMove() != null) {
+                System.out.println("💡 You should have played: " + deviationAnalysis.getRecommendedMove());
+                System.out.println();
+            }
+
+            // Show top opening moves (1000+ games, max 3)
+            if (deviationAnalysis.getTopOpeningMoves() != null && !deviationAnalysis.getTopOpeningMoves().isEmpty()) {
+                System.out.println("📚 Top Opening Moves:");
+                deviationAnalysis.getTopOpeningMoves().stream()
+                    .limit(3)
+                    .forEach(move -> System.out.println(
+                        "   " + move.getSan() + " - " + move.getTotalGames() + " games"
+                    ));
+                System.out.println();
+            }
+
+            // Show opponent's best response to your bad move
+            if (deviationAnalysis.getPunishmentMove() != null) {
+                System.out.println("⚔️  Opponent's best response to your move:");
+                System.out.println("   " + deviationAnalysis.getPunishmentMove());
+            }
+
+            System.out.println();
+        } else if (outOfTheoryAnalysis != null) {
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            System.out.println("Move " + outOfTheoryAnalysis.getFormattedMoveNumber() + " " +
+                               outOfTheoryAnalysis.getPlayerName() + ": " + outOfTheoryAnalysis.getPlayedMove());
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+            System.out.println("ℹ️  Opening theory ends here");
+            System.out.println("   (No moves with 1000+ games in this position)");
+            System.out.println();
+
+            // Show opponent's best response
+            if (outOfTheoryAnalysis.getPunishmentMove() != null) {
+                System.out.println("⚔️  Opponent's best response to your move:");
+                System.out.println("   " + outOfTheoryAnalysis.getPunishmentMove());
+            }
+
+            System.out.println();
         }
 
         // Summary
         System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         System.out.println("Summary:");
-        System.out.println("  Total moves analyzed: " + analyses.size());
-        System.out.println("  Opening deviations: " + deviations);
+        System.out.println("  Opening followed: " + movesInTheory + " moves");
+
+        if (deviationAnalysis != null) {
+            System.out.println("  Result: Deviated at move " + deviationAnalysis.getMoveNumber());
+        } else if (outOfTheoryAnalysis != null) {
+            System.out.println("  Result: Reached end of theory");
+        } else {
+            System.out.println("  Result: Completed opening theory");
+        }
         System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
         // Display opening theory line (15 moves)
