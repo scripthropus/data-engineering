@@ -18,6 +18,7 @@ public class OpeningTrainerService {
     private final ChessEngineClient engineClient;
     private final Gson gson;
     private final int openingPhaseLimit; // Number of moves to analyze
+    private static final long MIN_GAMES = 1000; // Minimum games to consider as theory
 
     public OpeningTrainerService() {
         this(15); // Default: analyze first 15 moves (30 plies)
@@ -105,16 +106,23 @@ public class OpeningTrainerService {
         if (openingTheory != null && openingTheory.getMoves() != null && !openingTheory.getMoves().isEmpty()) {
             analysis.setTopOpeningMoves(openingTheory.getMoves());
 
-            // Check if played move is in top opening moves
-            boolean isOpeningMove = openingTheory.getMoves().stream()
+            // Filter moves with at least MIN_GAMES
+            List<OpeningMove> theoryMoves = openingTheory.getMoves().stream()
+                .filter(om -> om.getTotalGames() >= MIN_GAMES)
+                .toList();
+
+            // Check if played move is in theory moves (with enough games)
+            boolean isOpeningMove = theoryMoves.stream()
                 .anyMatch(om -> om.getSan().equals(playedMove));
 
             analysis.setOpeningMove(isOpeningMove);
 
             if (!isOpeningMove) {
                 // Move deviated from theory - get recommended opening move
-                OpeningMove topMove = openingTheory.getMoves().get(0);
-                analysis.setRecommendedMove(topMove.getSan());
+                if (!theoryMoves.isEmpty()) {
+                    OpeningMove topMove = theoryMoves.get(0);
+                    analysis.setRecommendedMove(topMove.getSan());
+                }
 
                 // Optionally: Get opponent's best response to the bad move
                 PositionTracker afterPlayed = tracker.clone();
@@ -154,7 +162,6 @@ public class OpeningTrainerService {
     public String[] getOpeningTheoryLine(String[] startingMoves) throws IOException {
         List<String> theoryLine = new ArrayList<>();
         PositionTracker tracker = new PositionTracker();
-        final long MIN_GAMES = 100; // Minimum games to consider it theory
 
         // Apply starting moves
         for (String move : startingMoves) {
