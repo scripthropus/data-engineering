@@ -73,11 +73,31 @@ public class App {
             OpeningTrainerService trainer = new OpeningTrainerService(15);
             List<MoveAnalysis> analyses = trainer.analyzeGame(moves, playerColor);
 
-            // Get opening theory line
-            String[] theoryLine = trainer.getOpeningTheoryLine(new String[0]);
+            // Get starting moves for theory line (moves that were in theory)
+            boolean isWhite = "white".equalsIgnoreCase(playerColor);
+            int lastTheoryMoveIndex = -1;
+
+            for (MoveAnalysis analysis : analyses) {
+                if (analysis.isOpeningMove()) {
+                    // Calculate the actual index in the moves array
+                    int moveNumber = analysis.getMoveNumber();
+                    boolean isWhiteMove = analysis.isWhite();
+                    lastTheoryMoveIndex = (moveNumber - 1) * 2 + (isWhiteMove ? 0 : 1);
+                }
+            }
+
+            // Get starting moves (up to last theory move)
+            String[] startingMoves;
+            if (lastTheoryMoveIndex >= 0) {
+                startingMoves = java.util.Arrays.copyOfRange(moves, 0, lastTheoryMoveIndex + 1);
+            } else {
+                startingMoves = new String[0];
+            }
+
+            // Get opening theory line based on actual game
+            String[] theoryLine = trainer.getOpeningTheoryLine(startingMoves);
 
             // Display results
-            boolean isWhite = "white".equalsIgnoreCase(playerColor);
             displayAnalyses(analyses, moves, isWhite, theoryLine);
 
         } catch (Exception e) {
