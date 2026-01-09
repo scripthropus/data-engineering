@@ -10,17 +10,18 @@ Lichessでの自分の対局を分析し、序盤での定石から外れた手�
 2. **定石手の提示**: 定石から外れた場合、指すべきだった定石手を表示
 3. **相手の応手**: 定石から外れた手に対する相手の最善の応手を表示
 4. **プレイヤー色の自動判定**: 対局データから自動的にプレイヤーの色を判定
-5. **統計情報**: 定石から外れた回数を集計
+5. **最初の逸脱のみ表示**: 定石から外れた最初の手だけを表示し、その後はスキップ
 
 ### 出力される情報
 
 各手について、以下の情報が表示されます：
 
-- ✅ **定石内の手**: 何も表示されません
-- ❌ **定石から外れた手**:
+- ✅ **定石内の手**: 何も表示されません（次の手の分析を継続）
+- ❌ **定石から外れた手**（最初の1手のみ）:
   - 📚 トップ定石手（最もプレイされている上位3手）
   - 💡 指すべきだった手（定石の最善手）
   - ⚔️ 相手の最善応手（あなたの手に対する相手の咎め方）
+  - その後の手は分析せず、Summaryを表示
 
 ## 必要な環境
 
@@ -68,6 +69,8 @@ java -cp target/chess-1.0-SNAPSHOT.jar jp.ac.dendai.App magnus white 5
 
 ## 出力例
 
+### 定石から外れた場合
+
 ```
 === Chess Opening Trainer ===
 Fetching games for user: def-e
@@ -99,8 +102,31 @@ Move 5... Black: d5
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Summary:
-  Total moves analyzed: 10
-  Opening deviations: 2
+  Total moves analyzed: 5
+  Opening deviations: 1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+### 定石通りだった場合
+
+```
+=== Chess Opening Trainer ===
+Fetching games for user: hikaru
+
+Game ID: xyz789abc
+Opening: Ruy Lopez: Morphy Defense
+
+White: hikaru (2850)
+Black: opponent456 (2800)
+
+Analyzing white moves for hikaru
+
+=== Opening Analysis Results ===
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Summary:
+  Total moves analyzed: 15
+  Opening deviations: 0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 

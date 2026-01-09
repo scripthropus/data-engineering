@@ -40,6 +40,7 @@ public class OpeningTrainerService {
         List<MoveAnalysis> analyses = new ArrayList<>();
         PositionTracker tracker = new PositionTracker();
         boolean analyzeWhite = "white".equalsIgnoreCase(playerColor);
+        boolean foundDeviation = false;
 
         // Analyze each move in the opening phase
         for (int i = 0; i < Math.min(moves.length, openingPhaseLimit * 2); i++) {
@@ -70,6 +71,14 @@ public class OpeningTrainerService {
                 );
 
                 analyses.add(analysis);
+
+                // If this move deviates from theory, stop analyzing
+                if (!analysis.isOpeningMove()) {
+                    foundDeviation = true;
+                    // Apply this move and break
+                    tracker.applyMoveSan(move);
+                    break;
+                }
             }
 
             // Apply the move for next iteration
