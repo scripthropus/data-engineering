@@ -9,7 +9,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 public class OpeningExplorerClient {
-    private static final String BASE_URL = "https://explorer.lichess.ovh/lichess";
+    private static final String BASE_URL = "https://explorer.lichess.ovh/masters";
 
     /**
      * Get opening theory moves for a position

@@ -18,7 +18,7 @@ public class OpeningTrainerService {
     private final ChessEngineClient engineClient;
     private final Gson gson;
     private static final int OPENING_PHASE_LIMIT = 15; // Number of moves to analyze
-    private static final long MIN_GAMES = 1000; // Minimum games to consider as theory
+    private static final long MIN_GAMES = 100; // Minimum games to consider as theory
 
     public OpeningTrainerService() {
         this.explorerClient = new OpeningExplorerClient();
