@@ -17,8 +17,7 @@ public class OpeningTrainerService {
     private final OpeningExplorerClient explorerClient;
     private final ChessEngineClient engineClient;
     private final Gson gson;
-    private static final int OPENING_PHASE_LIMIT = 15; // Number of moves to analyze
-    private static final long MIN_GAMES = 100; // Minimum games to consider as theory
+    private static final long MIN_GAMES = 100;
 
     public OpeningTrainerService() {
         this.explorerClient = new OpeningExplorerClient();
@@ -26,169 +25,116 @@ public class OpeningTrainerService {
         this.gson = new Gson();
     }
 
-    /**
-     * Analyze a complete game
-     * @param moves Array of moves in SAN format
-     * @param playerColor "white" or "black" - the player we're analyzing
-     * @return List of move analyses
-     */
     public List<MoveAnalysis> analyzeGame(String[] moves, String playerColor) throws IOException {
         List<MoveAnalysis> analyses = new ArrayList<>();
         PositionTracker tracker = new PositionTracker();
-        boolean analyzeWhite = "white".equalsIgnoreCase(playerColor);
+        boolean isPlayerWhite = "white".equalsIgnoreCase(playerColor);
 
-        // Analyze each move in the opening phase
-        for (int i = 0; i < Math.min(moves.length, OPENING_PHASE_LIMIT * 2); i++) {
-            boolean isWhiteMove = i % 2 == 0;
+        for (int i = 0; i < Math.min(moves.length, 30); i++) {
+            boolean isWhiteMove = (i % 2 == 0);
             int moveNumber = (i / 2) + 1;
             String move = moves[i];
 
-            // Get opening theory for current position (BEFORE applying the move)
-            String currentUciMoves = tracker.getAllMovesAsUci();
-            OpeningResponse openingTheory = null;
-
-            try {
-                String openingJson = explorerClient.getOpeningMoves(currentUciMoves);
-                openingTheory = gson.fromJson(openingJson, OpeningResponse.class);
-            } catch (Exception e) {
-                System.err.println("Warning: Could not fetch opening theory for move " + moveNumber + ": " + e.getMessage());
-            }
-
-            // Filter moves with at least MIN_GAMES
-            List<OpeningMove> theoryMoves = new ArrayList<>();
-            if (openingTheory != null && openingTheory.getMoves() != null) {
-                theoryMoves = openingTheory.getMoves().stream()
-                    .filter(om -> om.getTotalGames() >= MIN_GAMES)
-                    .toList();
-            }
-
-            // Check if theory exists in this position
+            List<OpeningMove> theoryMoves = getTheoryMoves(tracker);
+            
             if (theoryMoves.isEmpty()) {
-                // Out of theory - no moves with MIN_GAMES
-                if (isWhiteMove == analyzeWhite) {
-                    // Mark this as out of theory
+                if (isWhiteMove == isPlayerWhite) {
                     MoveAnalysis analysis = new MoveAnalysis(moveNumber, isWhiteMove, move);
                     analysis.setOutOfTheory(true);
-                    analysis.setOpeningMove(false);
-
-                    // Get punishment move even when out of theory
-                    PositionTracker afterPlayed = tracker.clone();
-                    afterPlayed.applyMoveSan(move);
-                    String opponentResponse = getEngineBestMove(afterPlayed.getFen());
-                    if (opponentResponse != null) {
-                        analysis.setPunishmentMove(opponentResponse);
-                    }
-
+                    analysis.setPunishmentMove(getBestResponse(tracker, move));
                     analyses.add(analysis);
                 }
-                // Stop analyzing - opening phase has ended
                 break;
             }
 
-            // Theory exists - analyze only the specified player's moves
-            if (isWhiteMove == analyzeWhite) {
-                // Check if played move is in theory
-                boolean isInTheory = theoryMoves.stream()
-                    .anyMatch(om -> om.getSan().equals(move));
+            boolean isInTheory = theoryMoves.stream()
+                .anyMatch(m -> m.getSan().equals(move));
 
-                MoveAnalysis analysis = new MoveAnalysis(moveNumber, isWhiteMove, move);
-                analysis.setOpeningMove(isInTheory);
-                analysis.setOutOfTheory(false);
-
-                // Set top opening moves (only moves with MIN_GAMES)
-                analysis.setTopOpeningMoves(theoryMoves);
-
-                if (!isInTheory) {
-                    // Deviated from theory
-                    // Set recommended move (top theory move)
-                    OpeningMove topMove = theoryMoves.get(0);
-                    analysis.setRecommendedMove(topMove.getSan());
-
-                    // Get opponent's best response to the bad move
-                    PositionTracker afterPlayed = tracker.clone();
-                    afterPlayed.applyMoveSan(move);
-                    String opponentResponse = getEngineBestMove(afterPlayed.getFen());
-                    if (opponentResponse != null) {
-                        analysis.setPunishmentMove(opponentResponse);
-                    }
-
+            if (!isInTheory) {
+                if (isWhiteMove == isPlayerWhite) {
+                    MoveAnalysis analysis = new MoveAnalysis(moveNumber, isWhiteMove, move);
+                    analysis.setOpeningMove(false);
+                    analysis.setRecommendedMove(theoryMoves.get(0).getSan());
+                    analysis.setTopOpeningMoves(theoryMoves.stream().limit(3).toList());
+                    analysis.setPunishmentMove(getBestResponse(tracker, move));
                     analyses.add(analysis);
-                    // Apply this move and break
-                    tracker.applyMoveSan(move);
-                    break;
+                } else {
+                    MoveAnalysis analysis = new MoveAnalysis(moveNumber, isWhiteMove, move);
+                    analysis.setOpeningMove(false);
+                    analysis.setPunishmentMove(getBestResponse(tracker, move));
+                    analyses.add(analysis);
                 }
+                break;
+            }
 
+            if (isWhiteMove == isPlayerWhite) {
+                MoveAnalysis analysis = new MoveAnalysis(moveNumber, isWhiteMove, move);
+                analysis.setOpeningMove(true);
                 analyses.add(analysis);
             }
 
-            // Apply the move for next iteration
             tracker.applyMoveSan(move);
         }
 
         return analyses;
     }
 
-    /**
-     * Get best move from engine for a position
-     */
-    private String getEngineBestMove(String fen) {
-        try {
-            String response = engineClient.getBestMove(fen);
-            EngineResponse engineResponse = gson.fromJson(response, EngineResponse.class);
-            return engineResponse.getSan();
-        } catch (Exception e) {
-            System.err.println("Warning: Could not get engine best move: " + e.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Get opening theory line (15 moves)
-     * @param startingMoves Initial moves played (up to deviation or start of game)
-     * @return Array of opening theory moves (SAN format)
-     */
-    public String[] getOpeningTheoryLine(String[] startingMoves) throws IOException {
+    public String[] getTheoryLine(String[] actualMoves) throws IOException {
         List<String> theoryLine = new ArrayList<>();
         PositionTracker tracker = new PositionTracker();
-
-        // Apply starting moves
-        for (String move : startingMoves) {
-            tracker.applyMoveSan(move);
-            theoryLine.add(move);
-        }
-
-        // Continue with opening theory up to 15 full moves (30 plies)
-        while (theoryLine.size() < 30) {
-            String currentUciMoves = tracker.getAllMovesAsUci();
-
-            try {
-                String openingJson = explorerClient.getOpeningMoves(currentUciMoves);
-                OpeningResponse openingResponse = gson.fromJson(openingJson, OpeningResponse.class);
-
-                if (openingResponse.getMoves() == null || openingResponse.getMoves().isEmpty()) {
-                    // No more theory available
-                    break;
-                }
-
-                // Get the most played move (top move)
-                OpeningMove topMove = openingResponse.getMoves().get(0);
-
-                // Check if this move has enough games to be considered theory
-                if (topMove.getTotalGames() < MIN_GAMES) {
-                    // Not enough games, stop here
-                    break;
-                }
-
-                String move = topMove.getSan();
-                theoryLine.add(move);
-                tracker.applyMoveSan(move);
-
-            } catch (Exception e) {
-                // If we can't get theory, stop here
+        
+        for (int i = 0; i < Math.min(actualMoves.length, 30); i++) {
+            String move = actualMoves[i];
+            
+            List<OpeningMove> theoryMoves = getTheoryMoves(tracker);
+            
+            if (theoryMoves.isEmpty()) break;
+            
+            boolean isInTheory = theoryMoves.stream()
+                .anyMatch(m -> m.getSan().equals(move));
+            
+            if (!isInTheory) {
+                OpeningMove correctMove = theoryMoves.get(0);
+                theoryLine.add(correctMove.getSan());
+                tracker.applyMoveSan(correctMove.getSan());
                 break;
             }
+            
+            theoryLine.add(move);
+            tracker.applyMoveSan(move);
         }
-
+        
+        while (theoryLine.size() < 30) {
+            List<OpeningMove> theoryMoves = getTheoryMoves(tracker);
+            if (theoryMoves.isEmpty()) break;
+            
+            String move = theoryMoves.get(0).getSan();
+            theoryLine.add(move);
+            tracker.applyMoveSan(move);
+        }
+        
         return theoryLine.toArray(new String[0]);
+    }
+
+    private List<OpeningMove> getTheoryMoves(PositionTracker tracker) throws IOException {
+        String json = explorerClient.getOpeningMoves(tracker.getAllMovesAsUci());
+        OpeningResponse response = gson.fromJson(json, OpeningResponse.class);
+        
+        if (response.getMoves() == null) return new ArrayList<>();
+        
+        return response.getMoves().stream()
+            .filter(m -> m.getTotalGames() >= MIN_GAMES)
+            .toList();
+    }
+
+    private String getBestResponse(PositionTracker tracker, String move) {
+        try {
+            PositionTracker after = tracker.clone();
+            after.applyMoveSan(move);
+            String json = engineClient.getBestMove(after.getFen());
+            return gson.fromJson(json, EngineResponse.class).getSan();
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

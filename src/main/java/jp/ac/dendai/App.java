@@ -3,7 +3,6 @@ package jp.ac.dendai;
 import jp.ac.dendai.api.LichessApiClient;
 import jp.ac.dendai.model.Game;
 import jp.ac.dendai.model.MoveAnalysis;
-import jp.ac.dendai.model.OpeningMove;
 import jp.ac.dendai.service.OpeningTrainerService;
 import com.google.gson.Gson;
 
@@ -16,7 +15,7 @@ public class App {
 
             // Default values
             String username = "def-e";
-            String playerColor = null; // Will be auto-detected
+            String playerColor = null;
             int numGames = 1;
 
             // Parse command line arguments
@@ -34,11 +33,11 @@ public class App {
             String firstLine = response.split("\n")[0];
             Game game = gson.fromJson(firstLine, Game.class);
 
-            // Auto-detect player color if not specified
+            // Auto-detect player color
             if (playerColor == null) {
                 playerColor = game.getPlayerColor(username);
                 if (playerColor == null) {
-                    System.err.println("エラー: プレイヤーの手番を判定できませんでした．ユーザー '" + username + "' がこの対局に存在しません．");
+                    System.err.println("エラー: プレイヤーの手番を判定できませんでした．");
                     return;
                 }
             }
@@ -63,38 +62,16 @@ public class App {
                 }
             }
 
-            System.out.println("\n" + username + " の " + playerColor + " 番の手を解析中");
+            System.out.println("\n対局を解析中");
             System.out.println();
 
-            // Parse moves (in SAN format)
+            // Parse moves
             String[] moves = game.getMoves().split(" ");
 
             // Analyze game
             OpeningTrainerService trainer = new OpeningTrainerService();
             List<MoveAnalysis> analyses = trainer.analyzeGame(moves, playerColor);
-
-            // Get starting moves for theory line (moves that were in theory)
-            int lastTheoryMoveIndex = -1;
-
-            for (MoveAnalysis analysis : analyses) {
-                if (analysis.isOpeningMove()) {
-                    // Calculate the actual index in the moves array
-                    int moveNumber = analysis.getMoveNumber();
-                    boolean isWhiteMove = analysis.isWhite();
-                    lastTheoryMoveIndex = (moveNumber - 1) * 2 + (isWhiteMove ? 0 : 1);
-                }
-            }
-
-            // Get starting moves (up to last theory move)
-            String[] startingMoves;
-            if (lastTheoryMoveIndex >= 0) {
-                startingMoves = java.util.Arrays.copyOfRange(moves, 0, lastTheoryMoveIndex + 1);
-            } else {
-                startingMoves = new String[0];
-            }
-
-            // Get opening theory line based on actual game
-            String[] theoryLine = trainer.getOpeningTheoryLine(startingMoves);
+            String[] theoryLine = trainer.getTheoryLine(moves);
 
             // Display results
             displayAnalyses(analyses, theoryLine);
@@ -107,105 +84,77 @@ public class App {
     private static void displayAnalyses(List<MoveAnalysis> analyses, String[] theoryLine) {
         System.out.println("=== 序盤解析結果 ===\n");
 
-        // Count moves that followed theory
-        int movesInTheory = 0;
-        MoveAnalysis deviationAnalysis = null;
-        MoveAnalysis outOfTheoryAnalysis = null;
+        // 最後の解析結果を判定
+        MoveAnalysis lastAnalysis = analyses.isEmpty() ? null : analyses.get(analyses.size() - 1);
+        int theoryMoveCount = 0;
+        
+        for (MoveAnalysis a : analyses) {
+            if (a.isOpeningMove()) theoryMoveCount++;
+        }
 
-        for (MoveAnalysis analysis : analyses) {
-            if (analysis.isOpeningMove()) {
-                movesInTheory++;
-            } else if (analysis.isOutOfTheory()) {
-                outOfTheoryAnalysis = analysis;
-                break;
+        // 逸脱または定石終了の表示
+        if (lastAnalysis != null && !lastAnalysis.isOpeningMove()) {
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            System.out.println(lastAnalysis.getFormattedMoveNumber() + "手目 " +
+                               lastAnalysis.getPlayerName() + ": " + lastAnalysis.getPlayedMove());
+            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+            if (lastAnalysis.isOutOfTheory()) {
+                System.out.println("ℹ️  定石はここまでです");
+                System.out.println("   (この局面で100局以上指された手はありません)");
             } else {
-                deviationAnalysis = analysis;
-                break;
+                System.out.println("❌ この手は定石から外れています！");
+                
+                if (lastAnalysis.getRecommendedMove() != null) {
+                    System.out.println();
+                    System.out.println("💡 推奨手: " + lastAnalysis.getRecommendedMove());
+                }
+                
+                if (lastAnalysis.getTopOpeningMoves() != null && !lastAnalysis.getTopOpeningMoves().isEmpty()) {
+                    System.out.println();
+                    System.out.println("📚 主要な定石手:");
+                    lastAnalysis.getTopOpeningMoves()
+                        .forEach(move -> System.out.println(
+                            "   " + move.getSan() + " - " + move.getTotalGames() + " 局"
+                        ));
+                }
             }
-        }
 
-        // Display deviation or out-of-theory
-        if (deviationAnalysis != null) {
-            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            System.out.println(deviationAnalysis.getFormattedMoveNumber() + "手目 " +
-                               deviationAnalysis.getPlayerName() + ": " + deviationAnalysis.getPlayedMove());
-            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-            System.out.println("❌ この手は定石から外れています！");
-            System.out.println();
-
-            // Show recommended move (what you should have played)
-            if (deviationAnalysis.getRecommendedMove() != null) {
-                System.out.println("💡 推奨手: " + deviationAnalysis.getRecommendedMove());
+            if (lastAnalysis.getPunishmentMove() != null) {
                 System.out.println();
-            }
-
-            // Show top opening moves (100+ games, max 3)
-            if (deviationAnalysis.getTopOpeningMoves() != null && !deviationAnalysis.getTopOpeningMoves().isEmpty()) {
-                System.out.println("📚 主要な定石手:");
-                deviationAnalysis.getTopOpeningMoves().stream()
-                    .limit(3)
-                    .forEach(move -> System.out.println(
-                        "   " + move.getSan() + " - " + move.getTotalGames() + " 局"
-                    ));
-                System.out.println();
-            }
-
-            // Show opponent's best response to your bad move
-            if (deviationAnalysis.getPunishmentMove() != null) {
                 System.out.println("⚔️  相手の最善応手:");
-                System.out.println("   " + deviationAnalysis.getPunishmentMove());
+                System.out.println("   " + lastAnalysis.getPunishmentMove());
             }
-
-            System.out.println();
-        } else if (outOfTheoryAnalysis != null) {
-            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            System.out.println(outOfTheoryAnalysis.getFormattedMoveNumber() + "手目 " +
-                               outOfTheoryAnalysis.getPlayerName() + ": " + outOfTheoryAnalysis.getPlayedMove());
-            System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-            System.out.println("ℹ️  定石はここまでです");
-            System.out.println("   (この局面で100局以上指された手はありません)");
-            System.out.println();
-
-            // Show opponent's best response
-            if (outOfTheoryAnalysis.getPunishmentMove() != null) {
-                System.out.println("⚔️  相手の最善応手:");
-                System.out.println("   " + outOfTheoryAnalysis.getPunishmentMove());
-            }
-
             System.out.println();
         }
 
-        // Summary
+        // まとめ
         System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         System.out.println("まとめ:");
-        System.out.println("  定石に沿った手数: " + movesInTheory + " 手");
-
-        if (deviationAnalysis != null) {
-            System.out.println("  結果: " + deviationAnalysis.getMoveNumber() + "手目で逸脱");
-        } else if (outOfTheoryAnalysis != null) {
+        System.out.println("  定石に沿った手数: " + theoryMoveCount + " 手");
+        
+        if (lastAnalysis != null && lastAnalysis.isOutOfTheory()) {
             System.out.println("  結果: 定石の終了地点に到達");
+        } else if (lastAnalysis != null && !lastAnalysis.isOpeningMove()) {
+            System.out.println("  結果: " + lastAnalysis.getMoveNumber() + "手目で逸脱");
         } else {
             System.out.println("  結果: 定石を完遂");
         }
         System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-        // Display opening theory line (15 moves)
+        // 定石手順
         System.out.println();
         System.out.println("📖 定石手順:");
         System.out.println();
 
-        if (theoryLine.length < 2) {
+        if (theoryLine.length == 0) {
             System.out.println("   定石情報はありません");
             System.out.println();
             return;
         }
 
-        // Display up to 15 full moves (30 plies) from theory
+        // 最大15手表示
         int maxPly = Math.min(30, theoryLine.length);
-
-        // Display moves in pairs (White move, Black move)
         for (int ply = 0; ply < maxPly; ply += 2) {
             int moveNumber = (ply / 2) + 1;
             String whiteMove = theoryLine[ply];
@@ -218,7 +167,6 @@ public class App {
             }
         }
 
-        // Show if theory ran out before 15 moves
         if (theoryLine.length < 30) {
             int lastMove = (theoryLine.length + 1) / 2;
             System.out.println();

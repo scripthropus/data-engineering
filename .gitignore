@@ -36,3 +36,9 @@ Thumbs.db
 *.zip
 *.tar.gz
 *.rar
+
+## レポート関連
+report*
+ok-*
+
+prompt.md
