@@ -1,5 +1,7 @@
 <h1>チェス定石トレーナー：Lichess対局の定石分析システム</h1>
 <p><strong>学籍番号</strong>: [23FR036]<br><strong>氏名</strong>: [加藤 将貴]</p>
+<h2>https://github.com/scripthropus/data-engineering</h2>
+<h3>アップロードのミスで動作しない場合はクローンをお願いします．</h3>
 <hr>
 <h2>1. はじめに</h2>
 <h3>1.1 背景</h3>
@@ -404,3 +406,11 @@ mvn exec:java -Dexec.mainClass=&quot;jp.ac.dendai.App&quot; -Dexec.args=&quot;de
 </ul>
 <h2>感想</h2>
 <p>定石の判定に悩み，単純な実装にする方法に落ち着いた．複雑だった．<br>実際に動作するマッシュアップを完成させることができ，達成感はあるが，<br>自動実行してくれるなら，使ってもよいかなと思えるくらいのプログラムにはなった．</p>
+
+<p>参考文献<br>Lichess API Documentation<br>URL: <a href="https://lichess.org/api">https://lichess.org/api</a><br>概要: Lichess APIの公式ドキュメント．対局データ取得APIの仕様について記載．</p>
+<p>Lichess Opening Explorer API<br>URL: <a href="https://github.com/lichess-org/lila-openingexplorer">https://github.com/lichess-org/lila-openingexplorer</a><br>概要: Opening Explorer APIのGitHubリポジトリ．定石データベースの構造とAPI仕様について説明．</p>
+<p>Standard Algebraic Notation (SAN)<br>URL: <a href="https://en.wikipedia.org/wiki/Algebraic_notation_(chess)">https://en.wikipedia.org/wiki/Algebraic_notation_(chess)</a><br>概要: チェスの標準表記法についての解説．本プログラムで手の表記に使用．</p>
+<p>Forsyth-Edwards Notation (FEN)<br>URL: <a href="https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation">https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation</a><br>概要: チェス局面を文字列で表現する形式の解説．</p>
+<p>Gson User Guide<br>URL: <a href="https://github.com/google/gson/blob/master/UserGuide.md">https://github.com/google/gson/blob/master/UserGuide.md</a><br>概要: Gsonライブラリのユーザーガイド．JSON解析の実装方法について記載．</p>
+<p>chesslib - Java Chess Library<br>URL: <a href="https://github.com/bhlangonijr/chesslib">https://github.com/bhlangonijr/chesslib</a><br>概要: Javaでチェスのロジックを扱うためのライブラリ．盤面管理と手の検証に使用．</p>
+<p>Chess Engine APIのドキュメント<br>URL:<a href="https://chess-api.com/">https://chess-api.com/</a></p>
